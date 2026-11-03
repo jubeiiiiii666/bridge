@@ -1,0 +1,98 @@
+{
+  "name": "pocket-bridge",
+  "displayName": "Pocket Bridge",
+  "description": "Pilote tes sessions Claude Code et Codex de VS Code depuis ton téléphone (PWA sur le réseau local).",
+  "version": "1.0.0",
+  "publisher": "david-local",
+  "license": "UNLICENSED",
+  "private": true,
+  "icon": "media/icon-256.png",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "pocketBridge.showPairing",
+        "title": "Pocket Bridge : Connecter mon téléphone (QR code)",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "pocketBridge.openMirror",
+        "title": "Pocket Bridge : Ouvrir le miroir dans VS Code"
+      },
+      {
+        "command": "pocketBridge.restart",
+        "title": "Pocket Bridge : Redémarrer le serveur"
+      },
+      {
+        "command": "pocketBridge.resetToken",
+        "title": "Pocket Bridge : Révoquer les téléphones connectés (nouveau QR code)"
+      },
+      {
+        "command": "pocketBridge.showLogs",
+        "title": "Pocket Bridge : Afficher les journaux"
+      }
+    ],
+    "configuration": {
+      "title": "Pocket Bridge",
+      "properties": {
+        "pocketBridge.httpsPort": {
+          "type": "number",
+          "default": 8788,
+          "description": "Port HTTPS de l'application mobile."
+        },
+        "pocketBridge.httpPort": {
+          "type": "number",
+          "default": 8787,
+          "description": "Port HTTP (page d'installation du certificat + miroir local)."
+        },
+        "pocketBridge.approvalNotificationsInVSCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Afficher aussi dans VS Code les demandes d'autorisation lancées depuis le téléphone."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit -p .",
+    "package": "node scripts/build.mjs && vsce package --no-dependencies --allow-missing-repository --skip-license -o dist/pocket-bridge.vsix",
+    "install-ext": "npm run package && code --install-extension dist/pocket-bridge.vsix --force"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.317",
+    "node-forge": "^1.4.2",
+    "qrcode": "^1.5.4",
+    "web-push": "^3.6.7",
+    "ws": "^8.22.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/node-forge": "^1.3.14",
+    "@types/qrcode": "^1.5.6",
+    "@types/vscode": "1.95.0",
+    "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.18.2",
+    "@vscode/vsce": "^4.1.0",
+    "dompurify": "^3.4.17",
+    "esbuild": "^0.28.2",
+    "htm": "^3.1.1",
+    "marked": "^18.1.3",
+    "preact": "^11.1.1",
+    "puppeteer-core": "^25.16.0",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2"
+  }
+}
