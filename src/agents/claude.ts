@@ -176,7 +176,9 @@ export class ClaudeAgent implements Agent {
       if (opts.model && opts.model !== run.model) { await run.q.setModel(opts.model || undefined); run.model = opts.model; }
       run.inbox.push(message);
     } else {
-      run = this.start(sessionId, isNew, opts);
+      // Resume in the session's own folder (its transcript and project memory live there).
+      const cwd = opts.cwd || (isNew ? undefined : (await getSessionInfo(sessionId))?.cwd);
+      run = this.start(sessionId, isNew, { ...opts, cwd });
       run.inbox.push(message);
     }
     if (isNew) hub.publish({ t: 'sessions-changed', agent: 'claude' });
