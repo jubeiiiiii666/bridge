@@ -56,6 +56,11 @@
           "default": 8787,
           "description": "Port HTTP (page d'installation du certificat + miroir local)."
         },
+        "pocketBridge.showPhoneConversationsInVSCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Quand tu écris depuis le téléphone, ouvrir automatiquement dans VS Code le panneau Pocket Bridge sur cette conversation (affichage en direct)."
+        },
         "pocketBridge.approvalNotificationsInVSCode": {
           "type": "boolean",
           "default": true,

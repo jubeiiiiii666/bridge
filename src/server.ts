@@ -22,6 +22,8 @@ export interface ServerOptions {
   token: string;
   log: (s: string) => void;
   openInVSCode: (agent: AgentId, sessionId: string) => Promise<void>;
+  /** A message was sent from the phone (not from the VS Code mirror). */
+  onPhoneSend?: (agent: AgentId, sessionId: string) => void;
   workspaceFolders: () => string[];
 }
 
@@ -141,7 +143,7 @@ export class BridgeServer {
       if (url.pathname === '/ca.crt') return this.sendCa(res);
       if (url.pathname.startsWith('/api/')) {
         if (!this.authorized(req, secure)) return json(res, 401, { error: 'Téléphone non appairé' });
-        return await this.api(req, res, url);
+        return await this.api(req, res, url, secure);
       }
       return await this.static(res, url.pathname);
     } catch (e: any) {
@@ -201,7 +203,7 @@ export class BridgeServer {
     res.end(body);
   }
 
-  private async api(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
+  private async api(req: http.IncomingMessage, res: http.ServerResponse, url: URL, fromPhone: boolean) {
     const agentOf = (id: unknown) => {
       const a = this.o.agents[id as AgentId];
       if (!a) throw new Error(`Agent inconnu : ${id}`);
@@ -232,7 +234,9 @@ export class BridgeServer {
       case '/api/send': {
         const opts: SendOptions = { sessionId: body.sessionId || undefined, cwd: body.cwd, text: String(body.text ?? ''), images: body.images, model: body.model, mode: body.mode };
         if (!opts.text.trim() && !opts.images?.length) return json(res, 400, { error: 'Message vide' });
-        return json(res, 200, { sessionId: await agentOf(body.agent).send(opts) });
+        const sessionId = await agentOf(body.agent).send(opts);
+        if (fromPhone) this.o.onPhoneSend?.(body.agent, sessionId);
+        return json(res, 200, { sessionId });
       }
       case '/api/interrupt':
         await agentOf(body.agent).interrupt(body.sessionId);

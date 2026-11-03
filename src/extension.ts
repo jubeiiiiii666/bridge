@@ -90,6 +90,9 @@ async function start(context: vscode.ExtensionContext) {
     token: context.globalState.get<string>('token')!,
     log,
     openInVSCode,
+    onPhoneSend: (agent, sessionId) => {
+      if (vscode.workspace.getConfiguration('pocketBridge').get('showPhoneConversationsInVSCode', true)) openMirror({ agent, sessionId });
+    },
     workspaceFolders: () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath),
   });
   try {
@@ -223,12 +226,21 @@ async function renderPairing(_context: vscode.ExtensionContext) {
 
 // ---------- Mirror panel (same app, embedded in VS Code) ----------
 
-function openMirror() {
+let mirrorTarget = '';
+
+/** Live view of the phone's conversations inside VS Code (the official panels can't be driven from outside). */
+function openMirror(target?: { agent: AgentId; sessionId: string }) {
   if (!server) { void vscode.window.showWarningMessage('Pocket Bridge n’est pas actif dans cette fenêtre VS Code.'); return; }
-  if (mirrorPanel) { mirrorPanel.reveal(); return; }
-  mirrorPanel = vscode.window.createWebviewPanel('pocketBridge.mirror', 'Pocket Bridge', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
-  mirrorPanel.onDidDispose(() => (mirrorPanel = undefined));
-  const url = server.mirrorUrl;
+  const hash = target ? `#/${target.agent}/${encodeURIComponent(target.sessionId)}` : '';
+  if (mirrorPanel) {
+    mirrorPanel.reveal(undefined, true);
+    if (!target || hash === mirrorTarget) return;
+  } else {
+    mirrorPanel = vscode.window.createWebviewPanel('pocketBridge.mirror', 'Pocket Bridge · téléphone', { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: true, retainContextWhenHidden: true });
+    mirrorPanel.onDidDispose(() => { mirrorPanel = undefined; mirrorTarget = ''; });
+  }
+  mirrorTarget = hash;
+  const url = server.mirrorUrl + hash;
   const origin = new URL(url).origin;
   mirrorPanel.webview.html = `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${origin}; style-src 'unsafe-inline';">
