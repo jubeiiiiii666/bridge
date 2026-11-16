@@ -148,7 +148,7 @@ export class BridgeServer {
       return await this.static(res, url.pathname);
     } catch (e: any) {
       this.o.log(`[server] ${req.method} ${url.pathname}: ${e?.stack ?? e}`);
-      json(res, 500, { error: e?.message ?? String(e) });
+      json(res, e?.code ? 409 : 500, { error: e?.message ?? String(e), code: e?.code });
     }
   }
 
@@ -237,6 +237,11 @@ export class BridgeServer {
         const sessionId = await agentOf(body.agent).send(opts);
         if (fromPhone) this.o.onPhoneSend?.(body.agent, sessionId);
         return json(res, 200, { sessionId });
+      }
+      case '/api/fork': {
+        const agent = agentOf(body.agent);
+        if (!('fork' in agent)) return json(res, 400, { error: 'Copie non disponible pour cet agent' });
+        return json(res, 200, { sessionId: await (agent as any).fork(body.sessionId, body.mode) });
       }
       case '/api/interrupt':
         await agentOf(body.agent).interrupt(body.sessionId);

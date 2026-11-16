@@ -123,7 +123,7 @@ async function api(path, body) {
   const r = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' });
   if (r.status === 401) { set({ paired: false }); throw new Error('Téléphone non appairé'); }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || `Erreur ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error(j.error || `Erreur ${r.status}`), { code: j.code });
   return j;
 }
 
@@ -676,7 +676,8 @@ function Composer({ agent, sessionId, status, cwd, placeholder }) {
       await sendMessage({ agent, sessionId, cwd, text: value, images: imgs });
     } catch (e) {
       setText(value); setImages(imgs);
-      toast(e.message, true);
+      if (e.code === 'codex_locked') set({ sheet: { type: 'locked', agent, sessionId, text: value, images: imgs } });
+      else toast(e.message, true);
     } finally { setSending(false); }
   };
 
@@ -995,6 +996,7 @@ function Sheet() {
   }, []);
   let body;
   if (sh.type === 'project') body = html`<${ProjectSheet} agent=${sh.agent} close=${close} />`;
+  else if (sh.type === 'locked') body = html`<${LockedSheet} sh=${sh} close=${close} />`;
   else if (sh.type === 'model' || sh.type === 'mode') body = html`<${OptionSheet} kind=${sh.type} agent=${sh.agent} close=${close} />`;
   else body = html`<${SettingsSheet} close=${close} />`;
   return html`<div class="scrim" onClick=${close}></div><div class="sheet" role="dialog" aria-modal="true" data-agent=${sh.agent ?? s.agent}><div class="grab"></div>${body}</div>`;
@@ -1021,6 +1023,30 @@ function ProjectSheet({ agent, close }) {
     <div class="sec">Autre dossier</div>
     <div class="field"><input placeholder="C:\\Users\\…\\mon-projet" value=${custom} onInput=${(e) => setCustom(e.target.value)} onKeyDown=${(e) => e.key === 'Enter' && custom.trim() && pick(custom.trim())} />
       <button class="btn primary" style="flex:0 0 auto" disabled=${!custom.trim()} onClick=${() => pick(custom.trim())}>OK</button></div>`;
+}
+
+/** Codex lets one program write to a thread at a time; the VS Code panel keeps it while the thread is open there. */
+function LockedSheet({ sh, close }) {
+  const [busy, setBusy] = useState(false);
+  const fork = async () => {
+    setBusy(true);
+    try {
+      const mode = prefs.mode[sh.agent] ?? S.info?.agents.find((a) => a.id === sh.agent)?.defaultMode;
+      const { sessionId } = await api('/api/fork', { agent: sh.agent, sessionId: sh.sessionId, mode });
+      saveDraft(keyOf(sh.agent, sh.sessionId), '');
+      close();
+      go(`#/${sh.agent}/${encodeURIComponent(sessionId)}`);
+      await sendMessage({ agent: sh.agent, sessionId, text: sh.text, images: sh.images });
+      toast('Copie créée : la conversation continue ici');
+    } catch (e) { toast(e.message, true); setBusy(false); }
+  };
+  return html`<h3>Conversation ouverte dans VS Code</h3>
+    <div class="info">Le panneau Codex de VS Code a cette conversation ouverte et la verrouille : Codex n’autorise qu’un seul programme à y écrire à la fois.</div>
+    <div class="sec">Que veux-tu faire ?</div>
+    <button class="row" disabled=${busy} onClick=${fork}><${Icon} n=${busy ? 'loader' : 'copy'} cls=${busy ? 'spin' : ''} />
+      <div class="rt"><b>Continuer dans une copie</b><small>Duplique la conversation avec tout son historique et envoie ton message dans la copie</small></div><${Icon} n="right" cls="sm" /></button>
+    <button class="row" onClick=${close}><${Icon} n="monitor" />
+      <div class="rt"><b>Libérer depuis le PC</b><small>Dans VS Code, ouvre une autre conversation Codex, puis renvoie ton message (il est conservé)</small></div></button>`;
 }
 
 function OptionSheet({ kind, agent, close }) {

@@ -382,10 +382,18 @@ export class CodexAgent implements Agent {
       this.loaded.add(threadId);
       hub.publish({ t: 'sessions-changed', agent: 'codex' });
     } else if (!this.loaded.has(threadId)) {
-      await this.request('thread/resume', {
-        threadId, excludeTurns: true,
-        approvalPolicy: mp.approvalPolicy ?? null, sandbox: mp.sandbox ?? null, model: opts.model || null,
-      });
+      try {
+        await this.request('thread/resume', {
+          threadId, excludeTurns: true,
+          approvalPolicy: mp.approvalPolicy ?? null, sandbox: mp.sandbox ?? null, model: opts.model || null,
+        });
+      } catch (err: any) {
+        // Codex allows one writer per thread; the VS Code Codex panel holds it while the thread is open there.
+        if (/active writer/i.test(err?.message ?? '')) {
+          throw Object.assign(new Error('Cette conversation est ouverte dans le panneau Codex de VS Code, qui la verrouille en écriture.'), { code: 'codex_locked' });
+        }
+        throw err;
+      }
       this.loaded.add(threadId);
     }
 
@@ -421,6 +429,15 @@ export class CodexAgent implements Agent {
     const file = path.join(this.tmpDir, `${randomUUID()}.${img.mediaType.split('/')[1] || 'png'}`);
     await writeFile(file, Buffer.from(img.base64, 'base64'));
     return file;
+  }
+
+  /** Copy a thread (history included) into a new one that we own, leaving the original to its writer. */
+  async fork(threadId: string, mode?: string): Promise<string> {
+    const mp: any = modeParams(mode);
+    const r = await this.request('thread/fork', { threadId, excludeTurns: true, approvalPolicy: mp.approvalPolicy ?? null, sandbox: mp.sandbox ?? null });
+    this.loaded.add(r.thread.id);
+    hub.publish({ t: 'sessions-changed', agent: 'codex' });
+    return r.thread.id;
   }
 
   async interrupt(threadId: string) {
