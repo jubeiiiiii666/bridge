@@ -28,8 +28,10 @@ Tout s'exécute sur le PC, avec les mêmes binaires et les mêmes historiques qu
 
 ## Hors de chez toi
 
-Le téléphone doit atteindre `https://192.168.68.61:8788`. Avec Tailscale sur le téléphone et le NAS configuré
-en *subnet router* pour `192.168.68.0/24`, la même adresse fonctionne de l'extérieur, sans rien changer sur le PC.
+Le téléphone doit atteindre `https://192.168.68.61:8788`. Le NAS (app TrueNAS « tailscale », nœud `truenas-scale`)
+annonce le sous-réseau `192.168.68.0/24` (*subnet router*, configuré le 2026-11-19 ; la route doit être approuvée une fois
+dans la console Tailscale → Machines → truenas-scale → Edit route settings). Avec Tailscale activé sur le téléphone,
+la même adresse fonctionne donc de l'extérieur : même app, même appairage, même certificat. À la maison, laisse Tailscale coupé.
 Conseil : réserve l'IP du PC dans le routeur (DHCP). Si l'IP change, le certificat du serveur est réémis
 automatiquement ; l'autorité déjà installée sur le téléphone reste valable, seul le QR d'appairage est à rescanner.
 
