@@ -33,10 +33,10 @@ self.addEventListener('push', (e) => {
     tag: data.tag,
     renotify: true,
     requireInteraction: !!data.requireInteraction,
-    icon: '/icons/icon-192.png',
+    icon: data.icon || '/icons/icon-192.png', // senders may pick their own icon and vibration
     badge: '/icons/badge-96.png',
     data: { url: data.url || '/' },
-    vibrate: data.requireInteraction ? [120, 60, 120] : [80],
+    vibrate: data.vibrate || (data.requireInteraction ? [120, 60, 120] : [80]),
   }));
 });
 

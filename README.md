@@ -28,14 +28,19 @@ Tout s'exécute sur le PC, avec les mêmes binaires et les mêmes historiques qu
 
 ## Hors de chez toi
 
-Le téléphone doit atteindre `https://192.168.68.61:8788`. Le NAS (app TrueNAS « tailscale », nœud `truenas-scale`)
-annonce le sous-réseau `192.168.68.0/24` (*subnet router*, configuré le 2026-11-19 ; la route doit être approuvée une fois
-dans la console Tailscale → Machines → truenas-scale → Edit route settings). Avec Tailscale activé sur le téléphone,
-la même adresse fonctionne donc de l'extérieur : même app, même appairage, même certificat. À la maison, laisse Tailscale coupé.
+Le téléphone doit atteindre l'adresse locale du PC (`https://<ip-du-pc>:8788`). Le plus simple est un VPN comme
+[Tailscale](https://tailscale.com) : installé sur le PC, ou sur une autre machine du réseau qui annonce le sous-réseau local
+(*subnet router*, route à approuver une fois dans la console Tailscale). Avec le VPN activé sur le téléphone, la même adresse
+fonctionne de l'extérieur : même app, même appairage, même certificat. **N'ouvre jamais le port sur ta box (redirection de port).**
 Conseil : réserve l'IP du PC dans le routeur (DHCP). Si l'IP change, le certificat du serveur est réémis
 automatiquement ; l'autorité déjà installée sur le téléphone reste valable, seul le QR d'appairage est à rescanner.
 
 ## Sécurité
+
+> ⚠️ **Pocket Bridge donne à un téléphone le pouvoir d'exécuter du code sur ton PC**, avec tes droits, à travers Claude Code
+> et Codex. Ne l'utilise que sur un réseau de confiance (ton Wi-Fi domestique, ou un VPN), jamais sur un Wi-Fi public ni
+> exposé sur Internet. Toute personne qui obtient le QR d'appairage peut piloter tes agents : ne le partage pas, et révoque
+> les téléphones en cas de doute. Le mode « Tout autoriser » supprime toute confirmation : à réserver aux dossiers sans risque.
 
 - Accès par jeton (cookie `HttpOnly`) remis par le QR d'appairage. Pour révoquer : commande
   « Pocket Bridge : Révoquer les téléphones connectés ».
@@ -58,3 +63,7 @@ node scripts/cleanup-e2e.mjs <codex.exe>   # supprime les conversations de test
 Architecture : `src/agents/claude.ts` (Claude Agent SDK, binaire de l'extension Claude Code),
 `src/agents/codex.ts` (JSON-RPC `codex app-server`, binaire de l'extension Codex), `src/server.ts` (HTTPS + WebSocket + Web Push),
 `src/extension.ts` (barre d'état, QR, miroir, autorisations dans VS Code), `web/` (PWA Preact + htm, sans étape de build).
+
+## Licence
+
+[MIT](LICENSE). Projet indépendant, sans lien avec Anthropic ni OpenAI ; « Claude » et « Codex » sont leurs marques respectives.

@@ -4,7 +4,8 @@
   "description": "Pilote tes sessions Claude Code et Codex de VS Code depuis ton téléphone (PWA sur le réseau local).",
   "version": "1.0.0",
   "publisher": "david-local",
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/jubeiiiiii666/bridge" },
   "private": true,
   "icon": "media/icon-256.png",
   "engines": {

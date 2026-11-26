@@ -4,3 +4,4 @@
 !media/icon-256.png
 !dist/extension.js
 !dist/web/**
+!LICENSE
