@@ -48,6 +48,7 @@ export class BridgeServer {
   private clients = new Set<Client>();
   private unsub?: () => void;
   private certs?: Certs;
+  private certTimer?: NodeJS.Timeout;
   readonly push: Push;
 
   constructor(private o: ServerOptions) {
@@ -96,9 +97,22 @@ export class BridgeServer {
     ]);
     this.unsub = hub.onEvent((ev) => this.onHubEvent(ev));
     this.o.log(`[server] ${this.phoneUrl} (phone) · ${this.mirrorUrl} (mirror)`);
+    // The PC's IP can change while VS Code stays open (DHCP, Wi-Fi ↔ Ethernet): re-issue the
+    // server certificate for the new addresses without a restart (same CA, nothing to do on the phone).
+    let ips = lanAddresses().join();
+    this.certTimer = setInterval(async () => {
+      if (lanAddresses().join() === ips) return;
+      ips = lanAddresses().join();
+      try {
+        this.certs = await loadCerts(path.join(this.o.storageDir, 'certs'));
+        this.httpsServer?.setSecureContext({ key: this.certs.key, cert: this.certs.cert });
+        this.o.log(`[server] adresses changées (${ips}), certificat réémis · ${this.phoneUrl}`);
+      } catch (err) { this.o.log(`[server] réémission du certificat impossible : ${err}`); }
+    }, 30_000);
   }
 
   stop() {
+    clearInterval(this.certTimer);
     this.unsub?.();
     for (const c of this.clients) { clearInterval(c.watch?.timer); c.ws.terminate(); }
     this.clients.clear();
