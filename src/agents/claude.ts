@@ -54,6 +54,7 @@ interface Run {
   idleTimer?: NodeJS.Timeout;
   blockCount: Map<string, number>; // assistant message id -> blocks seen (aligns final blocks with stream indexes)
   streamMsgId?: string;
+  device?: string; // device of the latest prompt, injected by the UserPromptSubmit hook
 }
 
 interface Pending {
@@ -174,6 +175,7 @@ export class ClaudeAgent implements Agent {
       clearTimeout(run.idleTimer);
       if (opts.mode && opts.mode !== run.mode) { await run.q.setPermissionMode(opts.mode as PermissionMode); run.mode = opts.mode; }
       if (opts.model && opts.model !== run.model) { await run.q.setModel(opts.model || undefined); run.model = opts.model; }
+      run.device = opts.device;
       run.inbox.push(message);
     } else {
       // Resume in the session's own folder (its transcript and project memory live there).
@@ -204,10 +206,17 @@ export class ClaudeAgent implements Agent {
         // (SDK/headless entrypoints are filtered out there).
         env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: 'claude-vscode', CLAUDE_AGENT_SDK_CLIENT_APP: 'pocket-bridge/1.0.0' },
         canUseTool: (toolName, input, o) => this.askPermission(sessionId, toolName, input, o),
+        // Tell Claude where the prompt was typed (phone or PC), without showing it in the transcript text.
+        hooks: {
+          UserPromptSubmit: [{ hooks: [async () => {
+            const device = this.runs.get(sessionId)?.device;
+            return device ? { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `Message envoyé par l'utilisateur depuis : ${device} (via Pocket Bridge).` } } : {};
+          }] }],
+        },
         stderr: (d) => this.log(`[claude ${sessionId.slice(0, 8)}] ${d.trim()}`),
       },
     });
-    const run: Run = { sessionId, q, inbox, mode, model: opts.model, blockCount: new Map() };
+    const run: Run = { sessionId, q, inbox, mode, model: opts.model, blockCount: new Map(), device: opts.device };
     this.runs.set(sessionId, run);
     void this.consume(run);
     return run;

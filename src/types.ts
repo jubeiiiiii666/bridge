@@ -82,6 +82,7 @@ export interface SendOptions {
   images?: { mediaType: string; base64: string }[];
   model?: string;
   mode?: string;
+  device?: string; // where the message was typed, from the User-Agent (told to the agent as context)
 }
 
 export interface ModeOption {

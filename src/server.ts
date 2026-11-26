@@ -232,7 +232,7 @@ export class BridgeServer {
     const body = await readJson(req);
     switch (url.pathname) {
       case '/api/send': {
-        const opts: SendOptions = { sessionId: body.sessionId || undefined, cwd: body.cwd, text: String(body.text ?? ''), images: body.images, model: body.model, mode: body.mode };
+        const opts: SendOptions = { sessionId: body.sessionId || undefined, cwd: body.cwd, text: String(body.text ?? ''), images: body.images, model: body.model, mode: body.mode, device: deviceOf(req.headers['user-agent']) };
         if (!opts.text.trim() && !opts.images?.length) return json(res, 400, { error: 'Message vide' });
         const sessionId = await agentOf(body.agent).send(opts);
         if (fromPhone) this.o.onPhoneSend?.(body.agent, sessionId);
@@ -328,6 +328,15 @@ function listen(server: http.Server | https.Server, port: number) {
     server.once('error', reject);
     server.listen(port, '0.0.0.0', () => { server.off('error', reject); resolve(); });
   });
+}
+
+/** "smartphone (Android)", "tablette (iPad)", "PC (Windows)"… from a User-Agent header. */
+function deviceOf(ua = ''): string {
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+    : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : 'inconnu';
+  if (/iPad|Tablet/i.test(ua) || (os === 'Android' && !/Mobile/i.test(ua))) return `tablette (${os})`;
+  if (/Mobi|iPhone|Android/i.test(ua)) return `smartphone (${os})`;
+  return `PC (${os})`;
 }
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
